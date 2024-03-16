@@ -1,0 +1,31 @@
+# permissions for end users to edit dependencyrequests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: dependencyrequest-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kraken
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+  name: dependencyrequest-editor-role
+rules:
+- apiGroups:
+  - core.kraken-iac.eoinfennessy.com
+  resources:
+  - dependencyrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.kraken-iac.eoinfennessy.com
+  resources:
+  - dependencyrequests/status
+  verbs:
+  - get
