@@ -126,6 +126,15 @@ spec:
                   - type
                   type: object
                 type: array
+              dependentValues:
+                properties:
+                  fromConfigMaps:
+                    additionalProperties:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    type: object
+                type: object
             type: object
         type: object
     served: true

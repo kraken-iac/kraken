@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,6 +54,7 @@ type DependencyRequestReconciler struct {
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -63,7 +65,7 @@ type DependencyRequestReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := log.FromContext(ctx)
 	log.Info("Reconcile triggered")
 
@@ -91,16 +93,95 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				Message: "Initial reconciliation",
 			},
 		)
-
-		if err := r.Status().Update(ctx, dependencyRequest); err != nil {
-			log.Error(err, "Failed to update DependencyRequest status")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
 	}
 
-	log.Info("Resource has the following dependencies", "ConfigMapMependencies", dependencyRequest.Spec.ConfigMapDependencies)
+	// Update status on every return
+	defer func() {
+		if statusUpdateErr := r.Status().Update(ctx, dependencyRequest); statusUpdateErr != nil {
+			log.Error(err, "Failed to update DependencyRequest status")
+			err = statusUpdateErr
+		}
+	}()
 
+	// Reconcile ConfigMap dependencies
+	if dependencyRequest.Spec.ConfigMapDependencies != nil {
+		// Create new empty object to contain ConfigMap values and add it to the resource's status
+		newDependentValuesFromConfigMaps := make(v1alpha1.DependentValuesFromConfigMap)
+		dependencyRequest.Status.DependentValues.FromConfigMaps = newDependentValuesFromConfigMaps
+
+		for _, cmDep := range dependencyRequest.Spec.ConfigMapDependencies {
+			// Fetch ConfigMap
+			cm := &corev1.ConfigMap{}
+			if err := r.Get(
+				ctx,
+				types.NamespacedName{
+					Name:      cmDep.Name,
+					Namespace: req.Namespace,
+				},
+				cm,
+			); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("ConfigMap does not exist", "configMapName", cmDep.Name)
+					meta.SetStatusCondition(
+						&dependencyRequest.Status.Conditions,
+						metav1.Condition{
+							Type:    conditionTypeReady,
+							Status:  metav1.ConditionFalse,
+							Reason:  "ConfigMapNotPresent",
+							Message: fmt.Sprintf("ConfigMap %s does not exist", cmDep.Name),
+						},
+					)
+					return ctrl.Result{}, nil
+				} else {
+					log.Error(err, "Failed to fetch ConfigMap; Requeuing")
+					meta.SetStatusCondition(
+						&dependencyRequest.Status.Conditions,
+						metav1.Condition{
+							Type:    conditionTypeReady,
+							Status:  metav1.ConditionFalse,
+							Reason:  "ErrorFetchingConfigMap",
+							Message: fmt.Sprintf("An error occurred fetching ConfigMap %s: %s", cmDep.Name, err),
+						},
+					)
+					return ctrl.Result{}, err
+				}
+			}
+
+			// Get value from ConfigMap data
+			cmVal, exists := cm.Data[cmDep.Key]
+			if !exists {
+				log.Info("ConfigMap does not contain key", "configMapName", cmDep.Name, "configMapKey", cmDep.Key)
+				meta.SetStatusCondition(
+					&dependencyRequest.Status.Conditions,
+					metav1.Condition{
+						Type:    conditionTypeReady,
+						Status:  metav1.ConditionFalse,
+						Reason:  "ConfigMapKeyNotPresent",
+						Message: fmt.Sprintf("ConfigMap %s does not contain key %s", cmDep.Name, cmDep.Key),
+					},
+				)
+				return ctrl.Result{}, nil
+			}
+
+			// Add ConfigMap value to resource's status
+			if _, exists := newDependentValuesFromConfigMaps[cmDep.Name]; !exists {
+				newDependentValuesFromConfigMaps[cmDep.Name] = make(map[string]string)
+			}
+			newDependentValuesFromConfigMaps[cmDep.Name][cmDep.Key] = cmVal
+		}
+	}
+
+	// Resource successfully reconciled
+	meta.SetStatusCondition(
+		&dependencyRequest.Status.Conditions,
+		metav1.Condition{
+			Type:    conditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Reconciled",
+			Message: "Successfully retrieved all dependent values",
+		},
+	)
+	log.Info("Reconciliation has been successful")
 	return ctrl.Result{}, nil
 }
 

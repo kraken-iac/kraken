@@ -41,9 +41,19 @@ type DependencyRequestSpec struct {
 	ConfigMapDependencies []ConfigMapDependency `json:"configMapDependencies,omitempty"`
 }
 
+type ConfigMapData map[string]string
+
+type DependentValuesFromConfigMap map[string]ConfigMapData
+
+type DependentValues struct {
+	FromConfigMaps DependentValuesFromConfigMap `json:"fromConfigMaps,omitempty"`
+}
+
 // DependencyRequestStatus defines the observed state of DependencyRequest
 type DependencyRequestStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	DependentValues DependentValues `json:"dependentValues,omitempty"`
 }
 
 //+kubebuilder:object:root=true
