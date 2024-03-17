@@ -1,0 +1,16 @@
+apiVersion: core.kraken-iac.eoinfennessy.com/v1alpha1
+kind: DependencyRequest
+metadata:
+  labels:
+    app.kubernetes.io/name: dependencyrequest
+    app.kubernetes.io/instance: dependencyrequest-sample
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kraken
+  name: dependencyrequest-sample
+spec:
+  configMapDependencies:
+    - name: dependent-cm-1
+      key: dependent-cm-1-key
+    - name: dependent-cm-2
+      key: dependent-cm-2-key
