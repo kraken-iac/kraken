@@ -1,0 +1,23 @@
+apiVersion: core.kraken-iac.eoinfennessy.com/v1alpha1
+kind: StateDeclaration
+metadata:
+  labels:
+    app.kubernetes.io/name: statedeclaration
+    app.kubernetes.io/instance: statedeclaration-sample
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kraken
+  name: my-kind-dependent-sd-1
+spec:
+  data:
+    myList:
+      - 1
+      - 2
+      - 3
+    foo: bar
+    deeply:
+      nested:
+        data: baz
+    emptyObj: {}
+    booleanValue: true
+    decimalNumber: 3.14

@@ -17,16 +17,22 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"reflect"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 type KrakenResourceDependency struct {
-	Kind     string `json:"kind,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Template string `json:"template,omitempty"`
+	Kind        string       `json:"kind,omitempty"`
+	Name        string       `json:"name,omitempty"`
+	Path        string       `json:"path,omitempty"`
+	ReflectKind reflect.Kind `json:"reflectKind,omitempty"`
+}
+
+func (krd KrakenResourceDependency) GetStateDeclarationName() string {
+	return fmt.Sprintf("%s-%s", krd.Kind, krd.Name)
 }
 
 type ConfigMapDependency struct {
@@ -41,12 +47,16 @@ type DependencyRequestSpec struct {
 	ConfigMapDependencies []ConfigMapDependency `json:"configMapDependencies,omitempty"`
 }
 
-type ConfigMapData map[string]string
+// Maps ConfigMap names to ConfigMap data key/values
+type DependentValuesFromConfigMaps map[string]map[string]string
 
-type DependentValuesFromConfigMap map[string]ConfigMapData
+// Maps kinds to resource names to path/JSON values
+type DependentValuesFromKrakenResources map[string]map[string]map[string]apiextensionsv1.JSON
 
 type DependentValues struct {
-	FromConfigMaps DependentValuesFromConfigMap `json:"fromConfigMaps,omitempty"`
+	FromConfigMaps DependentValuesFromConfigMaps `json:"fromConfigMaps,omitempty"`
+
+	FromKrakenResources DependentValuesFromKrakenResources `json:"fromKrakenResources,omitempty"`
 }
 
 // DependencyRequestStatus defines the observed state of DependencyRequest
