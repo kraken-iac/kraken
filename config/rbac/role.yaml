@@ -38,3 +38,11 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - core.kraken-iac.eoinfennessy.com
+  resources:
+  - statedeclarations
+  verbs:
+  - get
+  - list
+  - watch

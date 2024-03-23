@@ -1,0 +1,27 @@
+# permissions for end users to view statedeclarations.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: statedeclaration-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kraken
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+  name: statedeclaration-viewer-role
+rules:
+- apiGroups:
+  - core.kraken-iac.eoinfennessy.com
+  resources:
+  - statedeclarations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.kraken-iac.eoinfennessy.com
+  resources:
+  - statedeclarations/status
+  verbs:
+  - get

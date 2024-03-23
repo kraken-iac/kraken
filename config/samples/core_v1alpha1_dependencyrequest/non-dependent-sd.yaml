@@ -1,0 +1,12 @@
+apiVersion: core.kraken-iac.eoinfennessy.com/v1alpha1
+kind: StateDeclaration
+metadata:
+  labels:
+    app.kubernetes.io/name: statedeclaration
+    app.kubernetes.io/instance: statedeclaration-sample
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kraken
+  name: non-dependent-sd
+spec:
+  data: 42

@@ -50,8 +50,12 @@ spec:
                       type: string
                     name:
                       type: string
-                    template:
+                    path:
                       type: string
+                    reflectKind:
+                      description: A Kind represents the specific kind of type that
+                        a Type represents. The zero Kind is not a valid kind.
+                      type: integer
                   type: object
                 type: array
             type: object
@@ -133,6 +137,16 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    description: Maps ConfigMap names to ConfigMap data key/values
+                    type: object
+                  fromKrakenResources:
+                    additionalProperties:
+                      additionalProperties:
+                        additionalProperties:
+                          x-kubernetes-preserve-unknown-fields: true
+                        type: object
+                      type: object
+                    description: Maps kinds to resource names to path/JSON values
                     type: object
                 type: object
             type: object

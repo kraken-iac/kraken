@@ -1,4 +1,5 @@
 ## Append samples of your project ##
 resources:
 - core_v1alpha1_dependencyrequest.yaml
+- core_v1alpha1_statedeclaration.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

@@ -19,8 +19,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"math"
+	"reflect"
 
+	"github.com/Jeffail/gabs/v2"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,6 +58,7 @@ type DependencyRequestReconciler struct {
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=dependencyrequests/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core.kraken-iac.eoinfennessy.com,resources=statedeclarations,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -106,7 +111,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Reconcile ConfigMap dependencies
 	if dependencyRequest.Spec.ConfigMapDependencies != nil {
 		// Create new empty object to contain ConfigMap values and add it to the resource's status
-		newDependentValuesFromConfigMaps := make(v1alpha1.DependentValuesFromConfigMap)
+		newDependentValuesFromConfigMaps := make(v1alpha1.DependentValuesFromConfigMaps)
 		dependencyRequest.Status.DependentValues.FromConfigMaps = newDependentValuesFromConfigMaps
 
 		for _, cmDep := range dependencyRequest.Spec.ConfigMapDependencies {
@@ -171,6 +176,124 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
+	// Reconcile Kraken resource dependencies
+	if dependencyRequest.Spec.ConfigMapDependencies != nil {
+		// Create new empty object to contain Kraken values and add it to the DependencyRequest's status
+		newDependentValuesFromKrakenResources := make(v1alpha1.DependentValuesFromKrakenResources)
+		dependencyRequest.Status.DependentValues.FromKrakenResources = newDependentValuesFromKrakenResources
+
+		for _, krDep := range dependencyRequest.Spec.KrakenResourceDependencies {
+			// Fetch corresponding StateDeclaration
+			sd := &v1alpha1.StateDeclaration{}
+			sdName := krDep.GetStateDeclarationName()
+			if err := r.Get(
+				ctx,
+				types.NamespacedName{
+					Name:      sdName,
+					Namespace: req.Namespace,
+				},
+				sd,
+			); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("StateDeclaration does not exist", "stateDeclarationName", sdName)
+					meta.SetStatusCondition(
+						&dependencyRequest.Status.Conditions,
+						metav1.Condition{
+							Type:    conditionTypeReady,
+							Status:  metav1.ConditionFalse,
+							Reason:  "StateDeclarationNotPresent",
+							Message: fmt.Sprintf("StateDeclaration %s does not exist", sdName),
+						},
+					)
+					return ctrl.Result{}, nil
+				} else {
+					log.Error(err, "Failed to fetch StateDeclaration; Requeuing")
+					meta.SetStatusCondition(
+						&dependencyRequest.Status.Conditions,
+						metav1.Condition{
+							Type:    conditionTypeReady,
+							Status:  metav1.ConditionFalse,
+							Reason:  "ErrorFetchingStateDeclaration",
+							Message: fmt.Sprintf("An error occurred fetching StateDeclaration %s: %s", sdName, err),
+						},
+					)
+					return ctrl.Result{}, err
+				}
+			}
+
+			// Parse StateDeclaration's raw data
+			jsonContainer, err := gabs.ParseJSON(sd.Spec.Data.Raw)
+			if err != nil {
+				log.Error(err, "Error parsing JSON")
+				meta.SetStatusCondition(
+					&dependencyRequest.Status.Conditions,
+					metav1.Condition{
+						Type:    conditionTypeReady,
+						Status:  metav1.ConditionFalse,
+						Reason:  "JSONParseError",
+						Message: fmt.Sprintf("Path \"%s\" does not exist in StateDeclaration %s", krDep.Path, sdName),
+					},
+				)
+			}
+
+			// Check path provided exists in StateDeclaration's data
+			if pathExists := jsonContainer.ExistsP(krDep.Path); !pathExists {
+				log.Info("Path provided does not exist in StateDeclaration's data",
+					"path", krDep.Path,
+					"stateDeclaration", sdName,
+				)
+				meta.SetStatusCondition(
+					&dependencyRequest.Status.Conditions,
+					metav1.Condition{
+						Type:    conditionTypeReady,
+						Status:  metav1.ConditionFalse,
+						Reason:  "PathDoesNotExist",
+						Message: fmt.Sprintf("Path \"%s\" does not exist in StateDeclaration %s", krDep.Path, sdName),
+					},
+				)
+				return ctrl.Result{}, nil
+			}
+
+			// Get data at path provided
+			pathContainer := jsonContainer.Path(krDep.Path)
+
+			// Check that type is as expected
+			data := pathContainer.Data()
+			actualKind := reflect.TypeOf(data).Kind()
+			if isExpectedType := isExpectedKind(krDep.ReflectKind, actualKind, data); !isExpectedType {
+				log.Info("Expected type did not match actual type",
+					"expected", krDep.ReflectKind.String(),
+					"actual", actualKind.String(),
+				)
+				meta.SetStatusCondition(
+					&dependencyRequest.Status.Conditions,
+					metav1.Condition{
+						Type:    conditionTypeReady,
+						Status:  metav1.ConditionFalse,
+						Reason:  "TypeMismatch",
+						Message: fmt.Sprintf("Expected type \"%s\" does not match type \"%s\"", krDep.ReflectKind.String(), actualKind.String()),
+					},
+				)
+				return ctrl.Result{}, nil
+			}
+
+			// Add value to dependent values
+			jsonBytes, err := pathContainer.MarshalJSON()
+			if err != nil {
+				log.Error(err, "Error marshalling JSON")
+			}
+			v := v1.JSON{}
+			v.Raw = jsonBytes
+			if _, exists := newDependentValuesFromKrakenResources[krDep.Kind]; !exists {
+				newDependentValuesFromKrakenResources[krDep.Kind] = make(map[string]map[string]v1.JSON)
+			}
+			if _, exists := newDependentValuesFromKrakenResources[krDep.Kind][krDep.Name]; !exists {
+				newDependentValuesFromKrakenResources[krDep.Kind][krDep.Name] = make(map[string]v1.JSON)
+			}
+			newDependentValuesFromKrakenResources[krDep.Kind][krDep.Name][krDep.Path] = v
+		}
+	}
+
 	// Resource successfully reconciled
 	meta.SetStatusCondition(
 		&dependencyRequest.Status.Conditions,
@@ -208,6 +331,29 @@ func (r *DependencyRequestReconciler) findDependencyRequestsForConfigMap(ctx con
 	return requests
 }
 
+func (r *DependencyRequestReconciler) findDependencyRequestsForStateDeclaration(ctx context.Context, stateDeclaration client.Object) []reconcile.Request {
+	attachedDependencyRequests := &v1alpha1.DependencyRequestList{}
+	listOps := &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(krakenResourceDependenciesField, stateDeclaration.GetName()),
+		Namespace:     stateDeclaration.GetNamespace(),
+	}
+	err := r.List(ctx, attachedDependencyRequests, listOps)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(attachedDependencyRequests.Items))
+	for i, item := range attachedDependencyRequests.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *DependencyRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Create index for DependencyRequests on ConfigMapDependencies field
@@ -219,11 +365,25 @@ func (r *DependencyRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// Create index for DependencyRequests on ConfigMapDependencies field
+	if err := mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&v1alpha1.DependencyRequest{},
+		krakenResourceDependenciesField,
+		indexByKrakenResourceDependencies); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DependencyRequest{}).
 		Watches(
 			&corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(r.findDependencyRequestsForConfigMap),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
+			&v1alpha1.StateDeclaration{},
+			handler.EnqueueRequestsFromMapFunc(r.findDependencyRequestsForStateDeclaration),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(r)
@@ -240,4 +400,31 @@ func indexByConfigMapDependencies(rawDependencyRequest client.Object) []string {
 		indexes[i] = cm.Name
 	}
 	return indexes
+}
+
+func indexByKrakenResourceDependencies(rawDependencyRequest client.Object) []string {
+	dr := rawDependencyRequest.(*v1alpha1.DependencyRequest)
+	if dr.Spec.KrakenResourceDependencies == nil {
+		return nil
+	}
+
+	indexes := make([]string, len(dr.Spec.KrakenResourceDependencies))
+	for i, krd := range dr.Spec.KrakenResourceDependencies {
+		indexes[i] = krd.GetStateDeclarationName()
+	}
+	return indexes
+}
+
+func isExpectedKind(expectedKind, actualKind reflect.Kind, value interface{}) bool {
+	// Special case for ints, since all JSON numbers are unmarshalled as float64
+	if expectedKind == reflect.Int {
+		if actualKind != reflect.Float64 {
+			return false
+		}
+		if math.Trunc(value.(float64)) != value.(float64) {
+			return false
+		}
+		return true
+	}
+	return expectedKind == actualKind
 }

@@ -14,3 +14,12 @@ spec:
       key: dependent-cm-1-key
     - name: dependent-cm-2
       key: dependent-cm-2-key
+  krakenResourceDependencies:
+    - kind: my-kind
+      name: dependent-sd-1
+      path: "myList.1"
+      reflectKind: 2
+    - kind: my-kind
+      name: dependent-sd-1
+      path: "deeply.nested.data"
+      reflectKind: 24
