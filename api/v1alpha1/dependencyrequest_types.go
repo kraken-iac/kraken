@@ -47,6 +47,10 @@ type DependencyRequestSpec struct {
 	ConfigMapDependencies []ConfigMapDependency `json:"configMapDependencies,omitempty"`
 }
 
+func (drs DependencyRequestSpec) HasDependencies() bool {
+	return len(drs.ConfigMapDependencies)+len(drs.KrakenResourceDependencies) > 0
+}
+
 // Maps ConfigMap names to ConfigMap data key/values
 type DependentValuesFromConfigMaps map[string]map[string]string
 
