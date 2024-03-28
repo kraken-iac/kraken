@@ -45,8 +45,6 @@ import (
 const (
 	configMapDependenciesField      string = ".spec.configMapDependencies"
 	krakenResourceDependenciesField string = ".spec.krakenResourceDependenciesField"
-
-	conditionTypeReady string = "Ready"
 )
 
 // DependencyRequestReconciler reconciles a DependencyRequest object
@@ -92,7 +90,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		meta.SetStatusCondition(
 			&dependencyRequest.Status.Conditions,
 			metav1.Condition{
-				Type:    conditionTypeReady,
+				Type:    v1alpha1.ConditionTypeReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  "Reconciling",
 				Message: "Initial reconciliation",
@@ -130,7 +128,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					meta.SetStatusCondition(
 						&dependencyRequest.Status.Conditions,
 						metav1.Condition{
-							Type:    conditionTypeReady,
+							Type:    v1alpha1.ConditionTypeReady,
 							Status:  metav1.ConditionFalse,
 							Reason:  "ConfigMapNotPresent",
 							Message: fmt.Sprintf("ConfigMap %s does not exist", cmDep.Name),
@@ -142,7 +140,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					meta.SetStatusCondition(
 						&dependencyRequest.Status.Conditions,
 						metav1.Condition{
-							Type:    conditionTypeReady,
+							Type:    v1alpha1.ConditionTypeReady,
 							Status:  metav1.ConditionFalse,
 							Reason:  "ErrorFetchingConfigMap",
 							Message: fmt.Sprintf("An error occurred fetching ConfigMap %s: %s", cmDep.Name, err),
@@ -159,7 +157,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				meta.SetStatusCondition(
 					&dependencyRequest.Status.Conditions,
 					metav1.Condition{
-						Type:    conditionTypeReady,
+						Type:    v1alpha1.ConditionTypeReady,
 						Status:  metav1.ConditionFalse,
 						Reason:  "ConfigMapKeyNotPresent",
 						Message: fmt.Sprintf("ConfigMap %s does not contain key %s", cmDep.Name, cmDep.Key),
@@ -199,7 +197,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					meta.SetStatusCondition(
 						&dependencyRequest.Status.Conditions,
 						metav1.Condition{
-							Type:    conditionTypeReady,
+							Type:    v1alpha1.ConditionTypeReady,
 							Status:  metav1.ConditionFalse,
 							Reason:  "StateDeclarationNotPresent",
 							Message: fmt.Sprintf("StateDeclaration %s does not exist", sdName),
@@ -211,7 +209,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 					meta.SetStatusCondition(
 						&dependencyRequest.Status.Conditions,
 						metav1.Condition{
-							Type:    conditionTypeReady,
+							Type:    v1alpha1.ConditionTypeReady,
 							Status:  metav1.ConditionFalse,
 							Reason:  "ErrorFetchingStateDeclaration",
 							Message: fmt.Sprintf("An error occurred fetching StateDeclaration %s: %s", sdName, err),
@@ -228,7 +226,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				meta.SetStatusCondition(
 					&dependencyRequest.Status.Conditions,
 					metav1.Condition{
-						Type:    conditionTypeReady,
+						Type:    v1alpha1.ConditionTypeReady,
 						Status:  metav1.ConditionFalse,
 						Reason:  "JSONParseError",
 						Message: fmt.Sprintf("Path \"%s\" does not exist in StateDeclaration %s", krDep.Path, sdName),
@@ -245,7 +243,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				meta.SetStatusCondition(
 					&dependencyRequest.Status.Conditions,
 					metav1.Condition{
-						Type:    conditionTypeReady,
+						Type:    v1alpha1.ConditionTypeReady,
 						Status:  metav1.ConditionFalse,
 						Reason:  "PathDoesNotExist",
 						Message: fmt.Sprintf("Path \"%s\" does not exist in StateDeclaration %s", krDep.Path, sdName),
@@ -268,7 +266,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				meta.SetStatusCondition(
 					&dependencyRequest.Status.Conditions,
 					metav1.Condition{
-						Type:    conditionTypeReady,
+						Type:    v1alpha1.ConditionTypeReady,
 						Status:  metav1.ConditionFalse,
 						Reason:  "TypeMismatch",
 						Message: fmt.Sprintf("Expected type \"%s\" does not match type \"%s\"", krDep.ReflectKind.String(), actualKind.String()),
@@ -298,7 +296,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	meta.SetStatusCondition(
 		&dependencyRequest.Status.Conditions,
 		metav1.Condition{
-			Type:    conditionTypeReady,
+			Type:    v1alpha1.ConditionTypeReady,
 			Status:  metav1.ConditionTrue,
 			Reason:  "Reconciled",
 			Message: "Successfully retrieved all dependent values",
