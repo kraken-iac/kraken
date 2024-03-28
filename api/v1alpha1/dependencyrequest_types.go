@@ -24,6 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ConditionTypeReady string = "Ready"
+)
+
 type KrakenResourceDependency struct {
 	Kind        string       `json:"kind,omitempty"`
 	Name        string       `json:"name,omitempty"`
