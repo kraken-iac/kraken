@@ -175,7 +175,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Reconcile Kraken resource dependencies
-	if dependencyRequest.Spec.ConfigMapDependencies != nil {
+	if dependencyRequest.Spec.KrakenResourceDependencies != nil {
 		// Create new empty object to contain Kraken values and add it to the DependencyRequest's status
 		newDependentValuesFromKrakenResources := make(v1alpha1.DependentValuesFromKrakenResources)
 		dependencyRequest.Status.DependentValues.FromKrakenResources = newDependentValuesFromKrakenResources
@@ -229,7 +229,7 @@ func (r *DependencyRequestReconciler) Reconcile(ctx context.Context, req ctrl.Re
 						Type:    v1alpha1.ConditionTypeReady,
 						Status:  metav1.ConditionFalse,
 						Reason:  "JSONParseError",
-						Message: fmt.Sprintf("Path \"%s\" does not exist in StateDeclaration %s", krDep.Path, sdName),
+						Message: fmt.Sprintf("Error unmarshalling StateDeclaration %s", sdName),
 					},
 				)
 			}
