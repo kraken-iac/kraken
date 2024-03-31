@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	corev1alpha1 "github.com/kraken-iac/kraken/api/v1alpha1"
-	"github.com/kraken-iac/kraken/internal/controller"
+	corev1alpha1 "github.com/kraken-iac/kraken/api/core/v1alpha1"
+	controller "github.com/kraken-iac/kraken/internal/controller/core"
 	//+kubebuilder:scaffold:imports
 )
 

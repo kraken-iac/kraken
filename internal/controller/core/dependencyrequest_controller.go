@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kraken-iac/kraken/api/v1alpha1"
+	"github.com/kraken-iac/kraken/api/core/v1alpha1"
 )
 
 const (
