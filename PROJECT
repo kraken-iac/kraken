@@ -5,6 +5,7 @@
 domain: kraken-iac.eoinfennessy.com
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: kraken
 repo: github.com/kraken-iac/kraken
 resources:
