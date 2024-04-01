@@ -9,9 +9,51 @@ rules:
   resources:
   - configmaps
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configexport.kraken-iac.eoinfennessy.com
+  resources:
+  - configexports
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configexport.kraken-iac.eoinfennessy.com
+  resources:
+  - configexports/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configexport.kraken-iac.eoinfennessy.com
+  resources:
+  - configexports/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - core.kraken-iac.eoinfennessy.com
   resources:

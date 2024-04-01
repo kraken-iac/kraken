@@ -1,0 +1,27 @@
+# permissions for end users to view configexports.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: configexport-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kraken
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+  name: configexport-viewer-role
+rules:
+- apiGroups:
+  - configexport.kraken-iac.eoinfennessy.com
+  resources:
+  - configexports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configexport.kraken-iac.eoinfennessy.com
+  resources:
+  - configexports/status
+  verbs:
+  - get

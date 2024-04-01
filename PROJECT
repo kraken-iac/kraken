@@ -26,4 +26,13 @@ resources:
   kind: StateDeclaration
   path: github.com/kraken-iac/kraken/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kraken-iac.eoinfennessy.com
+  group: configexport
+  kind: ConfigExport
+  path: github.com/kraken-iac/kraken/api/configexport/v1alpha1
+  version: v1alpha1
 version: "3"
