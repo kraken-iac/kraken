@@ -1,0 +1,23 @@
+apiVersion: configexport.kraken-iac.eoinfennessy.com/v1alpha1
+kind: ConfigExport
+metadata:
+  labels:
+    app.kubernetes.io/name: configexport
+    app.kubernetes.io/instance: configexport-sample
+    app.kubernetes.io/part-of: kraken
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kraken
+  name: configexport-sample
+spec:
+  configType: Secret
+  configMetadata:
+    name: my-exported-cf
+    namespace: default
+  entries:
+    - key: my-key
+      # value: foo
+      valueFrom:
+        krakenResource:
+          kind: my-kind
+          name: dependent-sd-1
+          path: deeply.nested.data
