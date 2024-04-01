@@ -280,6 +280,7 @@ func (r *ConfigExportReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1alpha1.ConfigExport{}).
 		Owns(&corev1alpha1.DependencyRequest{}).
 		Owns(&k8scorev1.ConfigMap{}).
+		Owns(&k8scorev1.Secret{}).
 		Complete(r)
 }
 
